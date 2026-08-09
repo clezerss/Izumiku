@@ -643,8 +643,22 @@ html_content = r'''<!DOCTYPE html>
 
     <script>
         // ===== CONFIG =====
-        const API_KEY = 'AQ.Ab8RN6KmzsHg1EZmw4vMn-V1H4hK1u66ZCCDrJijEACrCF0ZqA';
-        const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+        const API_KEY = 'AQ.Ab8RN6JOF18wbkuqzeMplKm6y_dMjM4f07VxheEgeJUPpsm7oA';
+        const API_URL = 'curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent" \
+  -H 'Content-Type: application/json' \
+  -H 'X-goog-api-key: AQ.Ab8RN6JOF18wbkuqzeMplKm6y_dMjM4f07VxheEgeJUPpsm7oA' \
+  -X POST \
+  -d '{
+    "contents": [
+      {
+        "parts": [
+          {
+            "text": "Explain how AI works in a few words"
+          }
+        ]
+      }
+    ]
+  }'';
         
         // ===== STATE =====
         let currentChatId = null;
