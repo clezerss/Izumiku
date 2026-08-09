@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Мой AI без цензуры</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            background: #0d0d0d;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+        }
+        h1 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #counter {
+            font-size: 18px;
+            background: #1e1e1e;
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: #4fc3f7;
+        }
+        #chat {
+            height: 450px;
+            overflow-y: auto;
+            border: 1px solid #333;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            background: #141414;
+        }
+        .user {
+            text-align: right;
+            color: #4fc3f7;
+            margin: 5px 0;
+        }
+        .bot {
+            text-align: left;
+            color: #fff;
+            background: #1e1e1e;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin: 5px 0;
+        }
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+        input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            background: #1e1e1e;
+            color: #fff;
+        }
+        button {
+            padding: 12px 24px;
+            background: #4fc3f7;
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #888;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>
+        🤖 Мой AI
+        <span id="counter">🔄 загрузка...</span>
+    </h1>
+
+    <div id="chat"></div>
+
+    <div class="input-area">
+        <input type="text" id="userInput" placeholder="Спроси что угодно...">
+        <button id="sendBtn" onclick="sendMessage()">Отправить</button>
+    </div>
+    <div id="status">💡 Осталось запросов на сегодня</div>
+
+    <script>
+        // ✅ ТВОЙ КЛЮЧ УЖЕ ВСТАВЛЕН
+        const API_KEY = "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";
+
+        const MODEL = "cognitivecomputations/dolphin-mistral-24b-venice-edition:free";
+        const STORAGE_KEY = "openrouter_usage";
+
+        function getToday() {
+            return new Date().toDateString();
+        }
+
+        function getUsage() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return { date: getToday(), count: 0 };
+                const data = JSON.parse(raw);
+                if (data.date !== getToday()) {
+                    return { date: getToday(), count: 0 };
+                }
+                return data;
+            } catch {
+                return { date: getToday(), count: 0 };
+            }
+        }
+
+        function saveUsage(count) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ date: getToday(), count }));
+        }
+
+        function updateCounter() {
+            const usage = getUsage();
+            const remaining = Math.max(0, 50 - usage.count);
+            document.getElementById("counter").textContent = `⏳ ${remaining}/50`;
+            document.getElementById("status").textContent =
+                remaining > 0 ?
+                `💡 Осталось ${remaining} запросов на сегодня` :
+                `⛔ Лимит на сегодня исчерпан. Завтра будет снова 50!`;
+            document.getElementById("sendBtn").disabled = remaining <= 0;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById("userInput");
+            const chat = document.getElementById("chat");
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            const usage = getUsage();
+            if (usage.count >= 50) {
+                alert("❌ Лимит на сегодня исчерпан! Завтра будет снова 50 запросов.");
+                return;
+            }
+
+            chat.innerHTML += `<div class="user"><b>Вы:</b> ${msg}</div>`;
+            input.value = "";
+            chat.scrollTop = chat.scrollHeight;
+
+            document.getElementById("sendBtn").disabled = true;
+
+            try {
+                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${API_KEY}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: MODEL,
+                        messages: [{ role: "user", content: msg }]
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error.message || "Ошибка API");
+                }
+
+                const reply = data.choices?.[0]?.message?.content || "⚠️ Пустой ответ от модели";
+
+                const newUsage = getUsage();
+                newUsage.count += 1;
+                saveUsage(newUsage.count);
+
+                chat.innerHTML += `<div class="bot"><b>AI:</b> ${reply}</div>`;
+                chat.scrollTop = chat.scrollHeight;
+                updateCounter();
+
+            } catch (e) {
+                chat.innerHTML += `<div class="bot"><b>⚠️ Ошибка:</b> ${e.message}</div>`;
+                chat.scrollTop = chat.scrollHeight;
+            } finally {
+                document.getElementById("sendBtn").disabled = false;
+            }
+        }
+
+        updateCounter();
+
+        document.getElementById("userInput").addEventListener("keydown", (e) => {
+            if (e.key === "Enter") sendMessage();
+        });
+    </script>
+
+</body>
+</html>
