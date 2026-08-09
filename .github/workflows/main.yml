@@ -1,0 +1,25 @@
+name: Сборка Izumiku Browser
+on: [push] # Собирать приложение каждый раз, когда ты обновляешь код сайта
+
+jobs:
+  build_ios:
+    runs-on: macos-latest # GitHub выделяет нам бесплатный Apple Mac в облаке
+    steps:
+      - name: Клонируем твой код Изюмику
+        uses: actions/checkout@v4
+
+      - name: Создаем структуру iOS-приложения
+        run: |
+          mkdir -p Payload
+          # Копируем твой index.html и все твои файлы (стили, скрипты) в папку сборки
+          cp -r * Payload/ 2>/dev/null || true
+          
+      - name: Упаковываем в IPA для iPhone
+        run: |
+          zip -r IzumikuBrowser.ipa Payload
+          
+      - name: Сохраняем готовый файл для скачивания
+        uses: actions/upload-artifact@v4
+        with:
+          name: Izumiku-iPhone-App
+          path: IzumikuBrowser.ipa
